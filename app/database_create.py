@@ -12,5 +12,7 @@ engine = create_engine(os.environ.get("DATABASE_URL"), echo=True)
 Base.metadata.create_all(engine)
 
 
+
+
 # docker-compose up --build
 # docker exec -it api_api_1 python app/database_create.py
