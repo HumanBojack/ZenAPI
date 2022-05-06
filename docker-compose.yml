@@ -1,0 +1,22 @@
+version: "3"
+services:
+  api:
+    build: .
+    depends_on:
+      - postgres
+    environment:
+      - DATABASE_URL=postgresql+psycopg2://db_login@postgres/api_database
+      - PORT=8000
+    ports:
+      - "8000:8000"
+    restart: on-failure:10
+    # volumes:
+    #   - ".:/code/app"
+  postgres:
+    image: postgres:latest
+    environment:
+      - POSTGRES_USER=db_login
+      - POSTGRES_DB=api_database
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    # ports:
+    #   - "5432:5432"
