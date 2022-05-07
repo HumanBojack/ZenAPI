@@ -17,10 +17,6 @@ DBSession = sessionmaker(bind=engine)
 
 app = FastAPI()
 
-@app.get('/')
-async def home():
-  return "Bon Toutou"
-
 @app.get("/seed")
 async def add_usr():
   with DBSession() as session:
@@ -104,14 +100,17 @@ async def get_user_info(username: str):
       raise HTTPException(status_code=404, detail="Can't find any user with this username")
 
 @app.get("/userlist")
-async def get_users_list():
+async def get_users_list(admins: bool = True):
   # Gets all the users
   with DBSession() as session:
-    users = session.query(User).all()
+    users = session.query(User)
+    if not admins: users = users.filter(User.is_admin == False)
+    users = users.all()
+
     if users:
       return users
     else:
-      raise HTTPException(status_code=404, detail="No user in the database yet")
+      raise HTTPException(status_code=404, detail="No user corresponding to the filter")
 
 # Text methods
 
@@ -150,13 +149,23 @@ async def get_text(username: str, date: str):
   else:
     return {"text": f"No entry on the {date}"}
 
-@app.get("/list")
-async def list():
+@app.get("/emotions")
+def get_emotions(start_date: str, end_date: str | None = None, username: str | None = None):
   with DBSession() as session:
-    users = session.query(User).all()
-    texts = session.query(DailyText).all()
+    q = session.query(DailyText)
 
-  return [users, texts]
+    if username: q = q.filter(DailyText.user_username==username)
+    if end_date:
+      q = q.filter(DailyText.date >= start_date, DailyText.date <= end_date)
+    else:
+      q = q.filter(DailyText.date == start_date)
+
+    q = q.all()
+    # This will change in order to return emotions percentages when the model will be done
+    if q:
+      return q
+    else:
+      raise HTTPException(status_code=404, detail="No text corresponding to the filter") 
 
 if __name__ == "__main__":
     uvicorn.run("__main__:app", host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
