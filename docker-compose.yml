@@ -2,16 +2,16 @@ version: "3"
 services:
   api:
     build: .
+    # comment this image or put your own azure / other image
+    image: projectzen.azurecr.io/api_api
     depends_on:
       - postgres
     environment:
       - DATABASE_URL=postgresql+psycopg2://db_login@postgres/api_database
-      - PORT=8000
+      - PORT=80
     ports:
-      - "8000:8000"
+      - "80:80"
     restart: on-failure:10
-    # volumes:
-    #   - ".:/code/app"
   postgres:
     image: postgres:latest
     environment:
