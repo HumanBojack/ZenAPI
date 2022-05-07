@@ -1,7 +1,7 @@
 import sqlalchemy
 # import pyodbc
 # import urllib
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 import uvicorn
 import os
 # import psycopg2
@@ -21,7 +21,7 @@ app = FastAPI()
 async def home():
   return "Bon Toutou"
 
-@app.get("/add")
+@app.get("/seed")
 async def add_usr():
   with DBSession() as session:
     jean = User(username="jean", first_name="zobe", last_name="mbb")
@@ -33,9 +33,11 @@ async def add_usr():
       session.commit()
       return 200
     except:
-      return 500
+      raise HTTPException(status_code=500, detail="Can't seed")
 
-class AddUser(BaseModel):
+# User methods
+
+class UserInfo(BaseModel):
   username: str
   last_name: str
   first_name: str
@@ -43,7 +45,7 @@ class AddUser(BaseModel):
   # password: str
 
 @app.post("/user")
-async def register(user_info: AddUser):
+async def register(user_info: UserInfo):
   new_user = User(
     username = user_info.username,
     first_name = user_info.first_name,
@@ -57,29 +59,61 @@ async def register(user_info: AddUser):
       session.commit()
       return 200
     except:
-      return 500
+      raise HTTPException(status_code=500, detail="Can't add this user, check types and unique username")
 
-@app.get("/userlist")
-async def get_users_list():
-  #return the whole list of users
-  pass
+@app.put("/user")
+async def modify_user(user_info: UserInfo):
+  with DBSession() as session:
+    user = session.query(User).filter(User.username == user_info.username).first()
+    if user:
+      user.first_name = user_info.first_name
+      user.last_name = user_info.last_name
+      user.is_admin = user_info.is_admin
+    else:
+      raise HTTPException(status_code=404, detail="Can't find this user")
+
+    try:
+      session.add(user)
+      session.commit()
+      return 200
+    except:
+      raise HTTPException(status_code=500, detail="Can't commit changes")
+
+@app.delete("/user")
+async def delete_user(username: str):
+  with DBSession() as session:
+    user = session.query(User).filter(User.username == username).first()
+    if user:
+      try:
+        session.delete(user)
+        session.commit()
+        return 200
+      except:
+        raise HTTPException(status_code=500, detail="Can't delete this user")
+    else:
+      raise HTTPException(status_code=404, detail="Can't find any user with this username")
 
 @app.get("/user")
 async def get_user_info(username: str):
-  # return all the infos for one user
-  pass
-
-@app.get("/text")
-async def get_text(username: str, date: str):
-  # get a text by user and date. Return an empty string if there isn't anything 
-  date_object = datetime.strptime(date, "%Y-%m-%d").date()
+  # return all the infos for a given user
   with DBSession() as session:
-    text = session.query(DailyText).filter(DailyText.user_username==username, DailyText.date == date_object).first()       
-  if text:
-    return text
-  else:
-    return {"text": f"No entry on the {date}"}
-  
+    user = session.query(User).filter(User.username == username).first()
+    if user:
+      return user
+    else:
+      raise HTTPException(status_code=404, detail="Can't find any user with this username")
+
+@app.get("/userlist")
+async def get_users_list():
+  # Gets all the users
+  with DBSession() as session:
+    users = session.query(User).all()
+    if users:
+      return users
+    else:
+      raise HTTPException(status_code=404, detail="No user in the database yet")
+
+# Text methods
 
 class Text(BaseModel):
   text: str
@@ -88,13 +122,11 @@ class Text(BaseModel):
 @app.post("/text")
 async def post_text(text: Text):
   with DBSession() as session:
-    # if there already is an entry today
+    # if there already is an entry today, update it. Else, create a new one
     entry = session.query(DailyText).filter(DailyText.user_username==text.user_username, DailyText.date == date.today()).first()
     if entry:
-      # update the current one
       entry.text = text.text
     else:
-      # create a new entry
       entry = DailyText(
         text = text.text,
         user_username = text.user_username
@@ -105,8 +137,18 @@ async def post_text(text: Text):
       session.commit()
       return 200
     except:
-      return 500
+      raise HTTPException(status_code=500, detail="Can't commit the text")
 
+@app.get("/text")
+async def get_text(username: str, date: str):
+  # get a text for a given user at a given date. Return an empty string if there isn't anything 
+  date_object = datetime.strptime(date, "%Y-%m-%d").date()
+  with DBSession() as session:
+    text = session.query(DailyText).filter(DailyText.user_username==username, DailyText.date == date_object).first()       
+  if text:
+    return text
+  else:
+    return {"text": f"No entry on the {date}"}
 
 @app.get("/list")
 async def list():
