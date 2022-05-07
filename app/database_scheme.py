@@ -1,6 +1,6 @@
 from sqlalchemy import MetaData, Table, Column, String, Boolean, Text, Integer, ForeignKey, Date
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from sqlalchemy.sql import func
 
 # metadata = MetaData()
@@ -27,6 +27,6 @@ class DailyText(Base):
   text = Column(Text(), nullable=False)
   date = Column(Date(), server_default=func.now())
   emotion = Column(String(100), nullable=True)
-  user_username = Column(ForeignKey("user.username"), nullable=False)
+  user_username = Column(ForeignKey("user.username", ondelete='CASCADE'), nullable=False)
 
-  user = relationship("User")
+  user = relationship("User", backref=backref("dailytext", passive_deletes=True))
