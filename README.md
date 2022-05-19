@@ -25,3 +25,6 @@ In the database, we have two tables :
 We also used **FastAPI** because of it's **simplicity** and the previous experiences we had with it.
 
 In the API, we have various methods to make a **CRUD** on the **user** and **dailytext** tables. The api is also used to **classify text** with the help of the model each day at noon.
+
+## CRON Prediction
+Every day at **midnight**, a cron job executes a **python script** in order to predict all of the texts that aren't predicted yet and **update them** in the database.
