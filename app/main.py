@@ -160,7 +160,8 @@ def get_emotions(start_date: str, end_date: str | None = None, username: str | N
     else:
       q = q.filter(DailyText.date == start_date)
 
-    q = q.all()
+    q = q.filter(DailyText.emotion != None).all()
+
     # This will change in order to return emotions percentages when the model will be done
     if q:
       return q
